@@ -3,7 +3,9 @@
 from threading import Thread
 
 from hypothesis import settings, strategies as st
-from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant, rule
+from hypothesis.stateful import (
+    RuleBasedStateMachine, initialize, invariant, rule,
+)
 
 from src.rpc import RPCClient, RPCServer
 from src.variant25 import DataModel, ModelError
@@ -153,7 +155,8 @@ class RpcStateMachine(RuleBasedStateMachine):
                 continue
             values = (client["locale"], inst["content"], result["status"])
             if values not in seen:
-                answer.append(dict(zip(("locale", "content", "status"), values)))
+                names = ("locale", "content", "status")
+                answer.append(dict(zip(names, values)))
                 seen.add(values)
         return answer
 

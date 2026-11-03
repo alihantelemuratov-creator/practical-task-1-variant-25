@@ -109,7 +109,8 @@ def _parse_response(body: bytes) -> dict | list[dict]:
             name = field.attrib["name"]
             value = field.text or ""
             record[name] = int(value) if name in {
-                "uid", "created", "client", "launched", "instruction", "cache_hit", "duration"
+                "uid", "created", "client", "launched",
+                "instruction", "cache_hit", "duration",
             } else value
         records.append(record)
     return records
@@ -147,11 +148,14 @@ class RPCHandler(socketserver.BaseRequestHandler):
                 result = self.server.model.create(entity, **params)
             response = _xml_response(result)
             self.server.logger.info("RPC response code=%s ok", code)
-        except (ConnectionError, OSError, ET.ParseError, ModelError, TypeError) as exc:
+        except (
+            ConnectionError, OSError, ET.ParseError, ModelError, TypeError
+        ) as exc:
             code = locals().get("code", 0)
             response = _xml_response(error=str(exc))
             self.server.logger.warning("RPC code=%s error=%s", code, exc)
-        self.request.sendall(struct.pack("<BBI", VERSION, code, len(response)) + response)
+        header = struct.pack("<BBI", VERSION, code, len(response))
+        self.request.sendall(header + response)
 
 
 class RPCServer(socketserver.ThreadingTCPServer):
@@ -186,7 +190,8 @@ class RPCClient:
             raise ValueError(f"Unknown RPC method: {method}")
         code = NAME_TO_CODE[method]
         body = _xml_request(params)
-        with socket.create_connection((self.host, self.port), self.timeout) as connection:
+        address = (self.host, self.port)
+        with socket.create_connection(address, self.timeout) as connection:
             connection.sendall(struct.pack("<IB", len(body), code) + body)
             version, returned_code, size = struct.unpack(
                 "<BBI", read_exact(connection, 6)

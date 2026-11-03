@@ -23,7 +23,8 @@ def _parameters(parts):
             raise ModelError(f"Expected field=value: {pair}")
         name, raw = pair.split("=", 1)
         values[name] = int(raw) if name in {
-            "created", "client", "launched", "instruction", "cache_hit", "duration", "now"
+            "created", "client", "launched", "instruction",
+            "cache_hit", "duration", "now",
         } else raw
     return values
 
@@ -47,7 +48,8 @@ def main():
             elif command == "list" and len(parts) == 2:
                 answer = model.list_all(parts[1])
             elif command == "update" and len(parts) >= 3:
-                answer = model.update(parts[1], int(parts[2]), **_parameters(parts[3:]))
+                parameters = _parameters(parts[3:])
+                answer = model.update(parts[1], int(parts[2]), **parameters)
             elif command == "recent":
                 answer = model.recent_results(**_parameters(parts[1:]))
             else:

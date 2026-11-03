@@ -24,7 +24,8 @@ class WebHandler(BaseHTTPRequestHandler):
         if size > 100_000:
             self.send_error(413)
             return
-        data = parse_qs(self.rfile.read(size).decode("utf-8"), keep_blank_values=True)
+        raw = self.rfile.read(size).decode("utf-8")
+        data = parse_qs(raw, keep_blank_values=True)
         method = data.get("method", [""])[0]
         parameters = data.get("parameters", [""])[0]
         try:
@@ -34,7 +35,8 @@ class WebHandler(BaseHTTPRequestHandler):
                     continue
                 key, value = line.split("=", 1)
                 params[key.strip()] = value.strip()
-            result = RPCClient(self.rpc_host, self.rpc_port).call(method, **params)
+            client = RPCClient(self.rpc_host, self.rpc_port)
+            result = client.call(method, **params)
             message = json.dumps(result, ensure_ascii=False, indent=2)
         except (OSError, ValueError) as error:
             message = f"Error: {error}"
@@ -42,19 +44,29 @@ class WebHandler(BaseHTTPRequestHandler):
 
     def _render(self, method="", parameters="", message=""):
         options = "".join(
-            f'<option value="{escape(name)}" {"selected" if name == method else ""}>{escape(name)}</option>'
+            f'<option value="{escape(name)}" '
+            f'{"selected" if name == method else ""}>'
+            f'{escape(name)}</option>'
             for name in sorted(NAME_TO_CODE)
         )
         page = f"""<!doctype html><html lang="ru"><meta charset="utf-8">
 <title>Вариант 25 — TCP RPC</title><style>
-body{{font:16px system-ui;max-width:760px;margin:3rem auto;padding:0 1rem;color:#172337}}
-h1{{font-size:1.7rem}}form{{display:grid;gap:1rem}}select,textarea,button{{font:inherit;padding:.7rem}}
-textarea{{min-height:9rem}}button{{background:#1c5ea8;color:#fff;border:0;cursor:pointer}}
-pre{{background:#f1f5f9;padding:1rem;white-space:pre-wrap;overflow-wrap:anywhere}}
+body{{font:16px system-ui;max-width:760px;
+margin:3rem auto;padding:0 1rem;color:#172337}}
+h1{{font-size:1.7rem}}
+form{{display:grid;gap:1rem}}
+select,textarea,button{{font:inherit;padding:.7rem}}
+textarea{{min-height:9rem}}
+button{{background:#1c5ea8;color:#fff;border:0;cursor:pointer}}
+pre{{background:#f1f5f9;padding:1rem;
+white-space:pre-wrap;overflow-wrap:anywhere}}
 </style><h1>Вариант 25 · TCP RPC</h1>
-<p>Вызов методов модели данных через TCP-сервер. Параметры укажите по одному в строке.</p>
-<form method="post" action="/call"><label>Метод<select name="method">{options}</select></label>
-<label>Параметры<textarea name="parameters" placeholder="locale=ru_RU">{escape(parameters)}</textarea></label>
+<p>Вызов методов модели данных через TCP-сервер.
+Параметры укажите по одному в строке.</p>
+<form method="post" action="/call">
+<label>Метод<select name="method">{options}</select></label>
+<label>Параметры<textarea name="parameters"
+placeholder="locale=ru_RU">{escape(parameters)}</textarea></label>
 <button type="submit">Выполнить</button></form>
 <h2>Ответ</h2><pre>{escape(message)}</pre></html>""".encode("utf-8")
         self.send_response(200)

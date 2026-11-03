@@ -65,7 +65,9 @@ class DataModel:
             raise ModelError(f"Unknown entity: {entity}")
         return getattr(self, f"{entity}s")
 
-    def _validate(self, entity: str, values: dict[str, Any], creating: bool) -> dict:
+    def _validate(
+        self, entity: str, values: dict[str, Any], creating: bool
+    ) -> dict:
         cls = TABLES[entity]
         allowed = set(cls.__dataclass_fields__) - {"uid"}
         unknown = set(values) - allowed
@@ -83,7 +85,10 @@ class DataModel:
             defaults = {
                 "client": {"locale": ""},
                 "instruction": {"content": "", "tags": "", "launched": 0},
-                "result": {"output": "", "status": "", "error": "", "cache_hit": 0, "duration": 0},
+                "result": {
+                    "output": "", "status": "", "error": "",
+                    "cache_hit": 0, "duration": 0,
+                },
             }
             result = {**defaults[entity], **result}
             result.setdefault("created", int(self._clock()))
@@ -97,7 +102,10 @@ class DataModel:
             if not any(row[0] == values["client"] for row in self.clients):
                 raise ModelError("Client does not exist")
         if entity == "result" and "instruction" in values:
-            if not any(row[0] == values["instruction"] for row in self.instructions):
+            if not any(
+                row[0] == values["instruction"]
+                for row in self.instructions
+            ):
                 raise ModelError("Instruction does not exist")
 
     def create(self, entity: str, **values) -> dict:
@@ -149,7 +157,8 @@ class DataModel:
                     values = (client[2], instruction[2], result[3])
                     if values not in seen:
                         seen.add(values)
-                        answer.append(dict(zip(("locale", "content", "status"), values)))
+                        names = ("locale", "content", "status")
+                        answer.append(dict(zip(names, values)))
             return answer
 
     def create_client(self, **values):

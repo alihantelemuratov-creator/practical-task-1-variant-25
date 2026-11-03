@@ -12,11 +12,20 @@ class ModelTests(unittest.TestCase):
     def test_join_and_six_minute_boundary(self):
         model = DataModel(clock=lambda: 1000)
         client = model.create("client", locale="ru")
-        recent = model.create("instruction", client=client["uid"], content="new", created=641)
-        old = model.create("instruction", client=client["uid"], content="old", created=640)
+        recent = model.create(
+            "instruction", client=client["uid"], content="new",
+            created=641,
+        )
+        old = model.create(
+            "instruction", client=client["uid"], content="old",
+            created=640,
+        )
         model.create("result", instruction=recent["uid"], status="ok")
         model.create("result", instruction=old["uid"], status="old")
-        self.assertEqual(model.recent_results(), [{"locale": "ru", "content": "new", "status": "ok"}])
+        self.assertEqual(
+            model.recent_results(),
+            [{"locale": "ru", "content": "new", "status": "ok"}],
+        )
 
     def test_rejects_missing_references(self):
         model = DataModel()
@@ -25,7 +34,11 @@ class ModelTests(unittest.TestCase):
         with self.assertRaises(ModelError):
             model.create("result", instruction=999)
 
-    @given(locale=st.text(max_size=30), content=st.text(max_size=30), status=st.text(max_size=30))
+    @given(
+        locale=st.text(max_size=30),
+        content=st.text(max_size=30),
+        status=st.text(max_size=30),
+    )
     @settings(max_examples=35)
     def test_round_trip_strings(self, locale, content, status):
         model = DataModel(clock=lambda: 1000)
@@ -35,7 +48,8 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(model.list_all("client"), [c])
         self.assertEqual(model.list_all("instruction"), [i])
         self.assertEqual(model.list_all("result"), [r])
-        self.assertEqual(model.recent_results(), [{"locale": locale, "content": content, "status": status}])
+        expected = [{"locale": locale, "content": content, "status": status}]
+        self.assertEqual(model.recent_results(), expected)
 
 
 class RPCIntegrationTests(unittest.TestCase):
@@ -61,10 +75,15 @@ class RPCIntegrationTests(unittest.TestCase):
         c = self.client.call("create_client", locale=locale)[0]
         self.assertEqual(len(self.client.call("list_all_client")), 1)
         self.client.call("update_client", uid=c["uid"], locale="en")
-        i = self.client.call("create_instruction", client=c["uid"], content=content, created=999)[0]
+        i = self.client.call(
+            "create_instruction", client=c["uid"],
+            content=content, created=999,
+        )[0]
         self.assertEqual(len(self.client.call("list_all_instruction")), 1)
         self.client.call("update_instruction", uid=i["uid"], tags="demo")
-        r = self.client.call("create_result", instruction=i["uid"], status=status)[0]
+        r = self.client.call(
+            "create_result", instruction=i["uid"], status=status,
+        )[0]
         self.assertEqual(len(self.client.call("list_all_result")), 1)
         self.client.call("update_result", uid=r["uid"], cache_hit=1)
         self.assertEqual(self.client.call("recent_results", now=1000), [

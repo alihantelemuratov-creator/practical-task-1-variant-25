@@ -7,6 +7,13 @@ from time import time
 from src.rpc import RPCClient, RPCServer
 from src.variant25 import ModelError
 
+def show_expected_error(call):
+    """Показать ожидаемую ошибку RPC."""
+    try:
+        call("create_result", instruction=999, status="failure")
+    except ModelError as error:
+        print("Expected error:", error)
+
 
 def main():
     with RPCServer(("127.0.0.1", 0)) as server:
@@ -43,10 +50,7 @@ def main():
             call("list_all_result")
             call("update_result", uid=result["uid"], cache_hit=1)
             call("recent_results")
-            try:
-                call("create_result", instruction=999, status="failure")
-            except ModelError as error:
-                print("Expected error:", error)
+            show_expected_error(call)
         finally:
             server.shutdown()
             worker.join(timeout=2)
