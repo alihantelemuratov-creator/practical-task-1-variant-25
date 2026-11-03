@@ -1,6 +1,8 @@
 [run]
 branch = True
-source = src
+source =
+    src.rpc
+    src.variant25
 
 [report]
 show_missing = True
