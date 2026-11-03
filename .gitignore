@@ -1,4 +1,15 @@
 __pycache__/
+*.py[cod]
+.pytest_cache/
 .hypothesis/
 .coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.venv/
+venv/
+.idea/
+.vscode/
 journal.log
+*.log
+*.zip
