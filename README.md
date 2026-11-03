@@ -95,6 +95,10 @@
 
     sh run.sh coverage
 
+GitHub Actions: https://github.com/alihantelemuratov-creator/practical-task-1-variant-25/actions
+
+Проверено в GitHub Actions 03.11.2026: 7 тестов пройдены, модельный тест Hypothesis пройден, общее покрытие ветвей двух проверяемых модулей — 86%.
+
 Просмотреть процент покрытия: вывод команды coverage report. Дополнительно создаётся htmlcov/index.html. Приводить число покрытия в отчёте следует только после фактического запуска в своей среде.
 
 ## Структура
