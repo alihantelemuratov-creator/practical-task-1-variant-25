@@ -9,6 +9,9 @@ import json
 from src.rpc import NAME_TO_CODE, RPCClient
 
 
+MAX_FORM_BYTES = 100_000
+
+
 class WebHandler(BaseHTTPRequestHandler):
     rpc_host = "127.0.0.1"
     rpc_port = 8765
@@ -21,7 +24,7 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         size = int(self.headers.get("Content-Length", "0"))
-        if size > 100_000:
+        if size > MAX_FORM_BYTES:
             self.send_error(413)
             return
         raw = self.rfile.read(size).decode("utf-8")

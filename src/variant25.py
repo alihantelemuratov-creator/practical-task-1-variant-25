@@ -37,6 +37,8 @@ class Result:
     duration: int
 
 
+SIX_MINUTES = 6 * 60
+
 TABLES = {"client": Client, "instruction": Instruction, "result": Result}
 STRING_FIELDS = {
     "client": {"locale"},
@@ -150,7 +152,7 @@ class DataModel:
             seen = set()
             for result in self.results:
                 instruction = instructions.get(result[5])
-                if instruction is None or instruction[1] <= now - 360:
+                if instruction is None or instruction[1] <= now - SIX_MINUTES:
                     continue
                 client = clients.get(instruction[3])
                 if client is not None:
