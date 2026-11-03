@@ -4,8 +4,8 @@ from threading import Thread
 from hypothesis import given, settings, strategies as st
 from hypothesis.stateful import RuleBasedStateMachine, invariant, rule
 
-from rpc import RPCClient, RPCServer
-from variant25 import DataModel, ModelError
+from src.rpc import RPCClient, RPCServer
+from src.variant25 import DataModel, ModelError
 
 
 class ModelTests(unittest.TestCase):

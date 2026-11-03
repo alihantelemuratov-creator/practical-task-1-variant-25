@@ -1,49 +1,111 @@
-# Практическое задание № 1 — вариант 25
+# Практическая работа №1 — вариант №25
 
-Прототип на Python хранит таблицы `Client`, `Instruction`, `Result` в списках в памяти. Данные не записываются на диск. Реализованы создание, получение всех записей и редактирование для каждой таблицы, а также выборка `locale`, `content`, `status` после соединения таблиц для инструкций, созданных за последние 6 минут. Итого 10 методов RPC.
+Дисциплина: «Прикладная разработка серверных частей веб-приложений на языке Питон».
+Сборник заданий ИКБО-71-24 (2026/2027), страницы 78–80, ER-диаграмма 25 и таблица протокола 25.
 
-## Запуск
+## Что реализовано
 
-Требуется Python 3.10+.
+Прототип работает на Python и хранит записи Client, Instruction и Result **в списках в оперативной памяти**. Сохранения таблиц на диск нет. Отдельно по заданию сохраняется файл журнала запросов journal.log.
 
-```powershell
-python server.py
-```
+### Этап 1: данные и REPL
 
-В другом терминале:
+Таблицы и атрибуты:
 
-```powershell
-python client.py create_client locale=ru_RU
-python client.py list_all_client
-python client.py create_instruction client=1 content=hello tags=demo
-python client.py create_result instruction=1 status=success output=hello
-python client.py recent_results
-```
+| Сущность | Атрибуты |
+| --- | --- |
+| Client | uid, created, locale |
+| Instruction | uid, created, content, client, tags, launched |
+| Result | uid, created, output, status, error, instruction, cache_hit, duration |
 
-`python demo.py` запускает сервер в фоне, вызывает все 10 методов, показывает одну ожидаемую ошибку и завершает работу. В рабочем режиме сервер пишет обращения и ошибки в `journal.log`.
+Слой данных: src/variant25.py. Для каждой сущности реализованы создание, получение всех записей и редактирование; всего девять методов, плюс select_recent_results (десятая операция). Предусмотрены проверки типов, связей, некорректных аргументов и ошибок.
 
-Для этапа 1 можно отдельно запустить REPL модели: `python model_repl.py`. Для веб-интерфейса сначала запустите RPC-сервер, затем `python web.py` и откройте `http://127.0.0.1:8080`.
+Выборка выполняет соединения по C.uid = I.client и I.uid = R.instruction, фильтр I.created > now - 6 минут и проекцию C.locale, I.content, R.status.
 
-## Формат протокола
+Запуск REPL:
 
-Все числа передаются в сетевом порядке байтов (big endian). Соединение обслуживает один вызов RPC.
+    python -m src.model_repl
 
-| Сообщение | Версия | Код операции | Размер XML | Тело XML |
-| --- | --- | --- | --- | --- |
-| Запрос | 4 байта | 1 байт | 4 байта | переменная длина |
-| Ответ | 1 байт | 1 байт | 4 байта | переменная длина |
+Запуск через Windows:
 
-Версия протокола — `1`. Коды операций: `1–3` для `Client`, `4–6` для `Instruction`, `7–9` для `Result` (создание, список, редактирование); `10` — выборка. Параметры передаются в XML как `<request><param name="field">value</param></request>`. Ответ содержит `<response ok="true"><data><item>...</item></data></response>` либо `<response ok="false"><error>...</error></response>`.
+    .\run.bat repl
 
-Поскольку условие не задаёт порядок байтов и единицу времени, в реализации выбраны big endian и Unix-секунды для полей `created`. Создание и редактирование проверяют внешние ключи `Instruction.client` и `Result.instruction`.
+### Этап 2: TCP RPC и XML
 
-## Проверка
+Сервер: src/server.py и src/rpc.py; клиент: src/client.py.
+Формат запроса (порядок байт **little-endian**):
 
-```powershell
-python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
-python -m coverage run --branch --source=variant25,rpc -m unittest discover -s tests
-python -m coverage report -m
-```
+| Смещение | Размер | Содержимое |
+| --- | --- | --- |
+| 0 | 4 байта | Размер XML-тела запроса |
+| 4 | 1 байт | Код операции |
+| 5 | переменно | XML-тело запроса |
 
-Тесты используют `RuleBasedStateMachine` из Hypothesis. В итоговом отчёте coverage приведены ветви. Исходное условие — страницы 78–80 открытого сборника (печатные страницы 78–80; в PDF это также страницы 78–80).
+Формат ответа:
+
+| Смещение | Размер | Содержимое |
+| --- | --- | --- |
+| 0 | 1 байт | Версия протокола |
+| 1 | 1 байт | Код операции |
+| 2 | 4 байта | Размер XML-тела ответа |
+| 6 | переменно | XML-тело ответа |
+
+В журнале journal.log фиксируются все обработанные RPC-запросы, в том числе некорректные. Файл исключён из Git.
+
+Для запуска откройте два терминала:
+
+    python -m src.server
+    python -m src.demo
+
+Клиент для отдельного вызова:
+
+    python -m src.client create_client locale=ru_RU
+    python -m src.client get_all_clients
+
+Демонстрация всех 10 функций:
+
+    .\run.bat demo
+
+Простой локальный HTTP-интерфейс (дополнительно):
+
+    python -m src.web
+
+После этого открыть http://127.0.0.1:8080; TCP-сервер должен быть запущен отдельно.
+
+### Этап 3: Model-Based Testing
+
+Тесты сгенерированы Hypothesis с помощью RuleBasedStateMachine. В файле tests/test_mbt_rpc.py эталонное состояние хранится отдельно в словарях и сопоставляется с состоянием TCP-сервера после последовательностей операций. В каждом начальном сценарии вызываются все 10 RPC-методов; также проверяются ошибки и временная граница 6 минут.
+
+Установить зависимости:
+
+    python -m pip install -r requirements.txt
+
+Запустить все тесты:
+
+    python -m pytest -q
+
+Запустить только MBT:
+
+    .\run.bat mbt
+
+Сформировать отчёт покрытия ветвей только по тестам, сгенерированным Hypothesis:
+
+    .\run.bat coverage
+
+На Linux:
+
+    sh run.sh coverage
+
+Просмотреть процент покрытия: вывод команды coverage report. Дополнительно создаётся htmlcov/index.html. Приводить число покрытия в отчёте следует только после фактического запуска в своей среде.
+
+## Структура
+
+- src/ — модель данных, REPL, TCP-сервер и RPC-клиент
+- tests/ — модульные и модельные проверки
+- run.bat / run.sh — сценарии запуска
+- requirements.txt — зависимости
+- .gitignore — исключение временных файлов
+- TEST_REPORT.md — как получить проверяемый отчёт
+
+## Git
+
+История включает отдельные коммиты подготовки модели, TCP RPC и модельных тестов. Не загружайте в репозиторий ZIP, journal.log, .coverage, .venv и __pycache__.
